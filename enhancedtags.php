@@ -230,9 +230,30 @@ function enhancedtags_civicrm_pageRun(&$page) {
     $page->assign('coordinators', $coordinators);
   }
 }
+/**
+ * Implementation of hook civicrm_merge
+ * set end date for coordinator when merging tags
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 10 Jun 2014
+ */
 function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NULL, $tables = NULL ) {
   if ($tables[0] == 'civicrm_entity_tag' && $tables[1] = 'civicrm_tag') {
     $params['tag_id'] = $mainId;
+    $params['end_date'] = CRM_Utils_Date::processDate(date('Ymd'));
+    CRM_Enhancedtags_BAO_TagEnhanced::updateByTagId($params);
+  }
+}
+/**
+ * Implementation of hook civicrm_post
+ * set end date for coordinator when deleting tags
+ * 
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 10 Jun 2014
+ */
+function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
+  if ($op === 'delete' && $objectName === 'Tag') {
+    $params['tag_id'] = $objectId;
     $params['end_date'] = CRM_Utils_Date::processDate(date('Ymd'));
     CRM_Enhancedtags_BAO_TagEnhanced::updateByTagId($params);
   }

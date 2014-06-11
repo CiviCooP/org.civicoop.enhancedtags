@@ -134,6 +134,9 @@ function enhancedtags_civicrm_postProcess($formName, &$form) {
         break;
       case CRM_Core_Action::UPDATE:
         $values['tag_id'] = $form->getVar('_id');
+        CRM_Core_Error::debug("values", $values);
+        CRM_Core_Error::debug('form', $form);
+        exit();
         _enhancedtags_update_tag_enhanced($values);
         break;
     }
@@ -144,6 +147,7 @@ function enhancedtags_civicrm_postProcess($formName, &$form) {
  */
 function _enhancedtags_update_tag_enhanced($values) {
   $params = array();
+  
   $params['tag_id'] = $values['tag_id'];
   if (isset($values['coordinator_id'])) {
     $params['coordinator_id'] = $values['coordinator_id'];
@@ -203,9 +207,15 @@ function _enhancedtags_default_coordinator_tag(&$form) {
     case CRM_Core_Action::UPDATE:
       $tagId = $form->getVar('_id');
       $enhancedTag = CRM_Enhancedtags_BAO_TagEnhanced::getByTagId($tagId);
-      list($defaults['coordinator_start_date']) = CRM_Utils_Date::setDateDefaults($enhancedTag['start_date']);
-      list($defaults['coordinator_end_date']) = CRM_Utils_Date::setDateDefaults($enhancedTag['end_date']);
-      $defaults['coordinator_id'] = $enhancedTag['coordinator_id'];
+      if (isset($enhancedTag['start_date'])) {
+        list($defaults['coordinator_start_date']) = CRM_Utils_Date::setDateDefaults($enhancedTag['start_date']);
+      }
+      if (isset($enhancedTag['end_date'])) {
+        list($defaults['coordinator_end_date']) = CRM_Utils_Date::setDateDefaults($enhancedTag['end_date']);
+      }
+      if (isset($enhancedTag['coordinator_id'])) {
+        $defaults['coordinator_id'] = $enhancedTag['coordinator_id'];
+      }
       break;
   }
   if (!empty($defaults)) {

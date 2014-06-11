@@ -55,7 +55,12 @@ class CRM_Enhancedtags_DAO_TagEnhanced extends CRM_Core_DAO {
         'end_date' => array(
           'name' => 'end_date',
           'type' => CRM_Utils_Type::T_DATE,
-        )
+        ) ,
+        'is_active' => array(
+          'name' => 'is_active',
+          'type' => CRM_Utils_Type::T_BOOLEAN,
+          'default' => '1',
+        )        
       );
     }
     return self::$_fields;
@@ -71,11 +76,12 @@ class CRM_Enhancedtags_DAO_TagEnhanced extends CRM_Core_DAO {
   {
     if (!(self::$_fieldKeys)) {
       self::$_fieldKeys = array(
-        'id'             =>  'id',
-        'tag_id'         =>  'tag_id',
+        'id' =>  'id',
+        'tag_id' =>  'tag_id',
         'coordinator_id' =>  'coordinator_id',
-        'start_date'            =>  'start_date',
-        'end_date'              =>  'end_date'
+        'start_date' =>  'start_date',
+        'end_date' =>  'end_date',
+        'is_active' => 'is_active'
       );
     }
     return self::$_fieldKeys;

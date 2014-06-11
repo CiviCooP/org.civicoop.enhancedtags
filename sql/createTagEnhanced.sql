@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `civicrm_tag_enhanced` (
   `coordinator_id` int(11),
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
+  `is_active` tinyint(4),
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `TAG_id` (`tag_id`)

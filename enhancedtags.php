@@ -134,9 +134,6 @@ function enhancedtags_civicrm_postProcess($formName, &$form) {
         break;
       case CRM_Core_Action::UPDATE:
         $values['tag_id'] = $form->getVar('_id');
-        CRM_Core_Error::debug("values", $values);
-        CRM_Core_Error::debug('form', $form);
-        exit();
         _enhancedtags_update_tag_enhanced($values);
         break;
     }
@@ -147,7 +144,6 @@ function enhancedtags_civicrm_postProcess($formName, &$form) {
  */
 function _enhancedtags_update_tag_enhanced($values) {
   $params = array();
-  
   $params['tag_id'] = $values['tag_id'];
   if (isset($values['coordinator_id'])) {
     $params['coordinator_id'] = $values['coordinator_id'];

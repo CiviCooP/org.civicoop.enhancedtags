@@ -39,9 +39,10 @@ class CRM_Enhancedtags_BAO_TagEnhanced extends CRM_Enhancedtags_DAO_TagEnhanced 
     }
     return $result;
   }
-  public static function getByTagId($tagId) {
+  public static function getActiveByTagId($tagId) {
     $tagEnhanced = new CRM_Enhancedtags_BAO_TagEnhanced();
     $tagEnhanced->tag_id = $tagId;
+    $tagEnhanced->is_active = 1;
     $tagEnhanced->find(true);
     $result = array();
     self::storeValues($tagEnhanced, $result);
@@ -74,32 +75,53 @@ class CRM_Enhancedtags_BAO_TagEnhanced extends CRM_Enhancedtags_DAO_TagEnhanced 
     return $result;
   }
   /**
-   * Function to update Enhanced tag
+   * Function to calculate end date for a coordinator when a new one is added
    * 
    * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
-   * @date 3 Jun 2014
-   * @param array $params 
-   * @return array $result
+   * @date 27 Jun 2014
+   * @param array $params
+   * @param object $tagEnhanced
+   * @return object $endDate
+   * @access private
+   * @static
+   */
+  private static function calculateCoordinatorEndDate($params, $tagEnhanced) {
+    if (empty($tagEnhanced->end_date)) {
+      if (isset($params['start_date'])) {
+        $endDate = new DateTime($params['start_date']);
+      } else {
+        $endDate = new DateTime();
+      }
+      $endDate->sub(new DateInterval('P1D'));
+    } else {
+      $endDate = new DateTime($tagEnhanced->end_date);
+    }
+    return $endDate;
+  }  
+  /**
+   * Function to set end date for active enhanced when tag is deleted
+   * (specific for PUM because sector coordinator has to be remembered
+   * even when sector (= tag) is removed)
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 27 Jun 2014
+   * @param int $tagId
    * @access public
    * @static
    */
-  public static function updateByTagId($params) {
-    if (empty($params)) {
-      throw new Exception('Params can not be empty when updating an enhanced tag');
+  public static function processDeletedTag($tagId) {
+    if (!empty($tagId)) {
+      $tagEnhanced = new CRM_Enhancedtags_BAO_TagEnhanced();
+      $tagEnhanced->tag_id = $tagId;
+      $tagEnhanced->is_active = 1;
+      $tagEnhanced->find();
+      if ($tagEnhanced->fetch()) {
+        $tagEnhanced->is_active = 0;
+        $tagEnhanced->end_date = CRM_Utils_Date::processDate(date('Ymd'));
+        $tagEnhanced->save();
+      }
     }
-    if (!isset($params['id']) && !isset($params['tag_id'])) {
-      throw new Exception('Params have to contain id or tag_id when updating an enhanced tag');      
-    }
-    $tagEnhanced = new CRM_Enhancedtags_BAO_TagEnhanced();
-    if (!isset($params['id'])) {
-      $tagEnhanced->tag_id = $params['tag_id'];
-      $tagEnhanced->find(true);
-      $params['id'] = $tagEnhanced->id;
-    }
-    $result = self::add($params);
-    return $result;
   }
-
   /**
    * Function to delete Enhanced tag
    * 
@@ -117,7 +139,10 @@ class CRM_Enhancedtags_BAO_TagEnhanced extends CRM_Enhancedtags_DAO_TagEnhanced 
     
     $tagEnhanced = new CRM_Enhancedtags_BAO_TagEnhanced();
     $tagEnhanced->tag_id = $tagId;
-    $tagEnhanced->delete();
+    $tagEnhanced->find();
+    while ($tagEnhanced->fetch()) {
+      $tagEnhanced->delete();
+    }
     return TRUE;
   }
   /**

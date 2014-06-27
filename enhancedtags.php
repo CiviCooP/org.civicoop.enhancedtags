@@ -130,55 +130,154 @@ function enhancedtags_civicrm_postProcess($formName, &$form) {
     $values = $form->exportValues();
     switch ($action) {
       case CRM_Core_Action::ADD:
-        _enhancedtags_create_tag_enhanced($values);
+        _enhancedtags_add_action($values);
         break;
       case CRM_Core_Action::UPDATE:
         $values['tag_id'] = $form->getVar('_id');
-        _enhancedtags_update_tag_enhanced($values);
+        $defaultValues = $form->getVar('_defaultValues');
+        _enhancedtags_update_action($values, $defaultValues);
         break;
     }
   }
 }
 /**
- * Function to update enhanced tag
+ * Function to get current coordinator id from form array defaultValues
+ * 
+ * @param array $defaultValues
+ * @return int $currentCoordinatorId
  */
-function _enhancedtags_update_tag_enhanced($values) {
-  $params = array();
-  $params['tag_id'] = $values['tag_id'];
-  if (isset($values['coordinator_id'])) {
-    $params['coordinator_id'] = $values['coordinator_id'];
+function _enhancedtags_get_current_coordinator_id($defaultValues) {
+  $currentCoordinatorId = 0;
+  if (isset($defaultValues['coordinator_id']) && !empty($defaultValues['coordinator_id'])) {
+    $currentCoordinatorId = $defaultValues['coordinator_id'];
   }
-  if (isset($values['coordinator_start_date'])) {
-    $params['start_date'] = CRM_Utils_Date::processDate($values['coordinator_start_date']);
-  }
-  if (isset($values['coordinator_end_date'])) {
-    $params['end_date'] = CRM_Utils_Date::processDate($values['coordinator_end_date']);
-  }
-  CRM_Enhancedtags_BAO_TagEnhanced::updateByTagId($params);
+  return $currentCoordinatorId;
 }
 /**
- * Function to create enhanced tag
+ * Function to update enhanced tag
+ * Possible scenarios:
+ * 1 - completely new coordinator is added. In that case defaultValues will not
+ *     hold coordinator_id and new one is to be created
+ * 2 - data of exisiting coordinator updated. In that case coordinator is the same 
+ *     as in defaultValues and existing data is to be updated
+ * 3 - new coordinator is introduced. In that case coordinator_id in defaultValues
+ *     is not empty but different. Old coordinator to be ended and new one to
+ *     be created
+ * 4 - new coordinator is 0. In that case old to be ended
+ * 
+ * @param array $newValues
+ * @param array $defaultValues
  */
-function _enhancedtags_create_tag_enhanced($values) {
-  $tagQuery = 'SELECT MAX(id) as tagId FROM civicrm_tag';
-  $tagDao = CRM_Core_DAO::executeQuery($tagQuery);
-  if ($tagDao->fetch()) {
-    $params = array();
-    $params['tag_id'] = $tagDao->tagId;
-    if (isset($values['coordinator_id'])) {
-      $params['coordinator_id'] = $values['coordinator_id'];
+function _enhancedtags_update_action($newValues, $defaultValues) {
+  if (!isset($defaultValues['coordinator_id'])) {
+    if (isset($newValues['coordinator_id']) && !empty($newValues['coordinator_id'])) {
+      _enhancedtags_add_tag_enhanced($newValues);
     }
+  } else {
+    if ($newValues['coordinator_id'] == $defaultValues['coordinator_id']) {
+      _enhancedtags_update_tag_enhanced($newValues);
+    } else {
+      _enhancedtags_terminate_tag_enhanced($defaultValues, $newValues['coordinator_start_date']);
+      if ($newValues['coordinator_id'] != 0) {
+        _enhancedtags_add_tag_enhanced($newValues);
+      }
+    }
+  }
+}
+/**
+ * Function to terminate enhanced tag
+ * 
+ * @param array $values
+ */
+function _enhancedtags_terminate_tag_enhanced($values, $startDate) {
+  if ($values['coordinator_id'] != 0) {
+    $activeTag = CRM_Enhancedtags_BAO_TagEnhanced::getActiveByTagId($values['id']);
+    if (!empty($activeTag)) {
+      $params = array('id' => $activeTag['id'], 'is_active' => 0);
+      if (!empty($startDate)) {
+        $endDate = new DateTime($startDate);
+      } else {
+        $endDate = new DateTime();
+      }
+      $endDate->sub(new DateInterval('P1D'));
+      $params['end_date'] = $endDate->format('Ymd');
+      CRM_Enhancedtags_BAO_TagEnhanced::add($params);
+    }
+  }
+}
+/**
+ * Function to get active enhanced tag for coordinator and update
+ * 
+ * @param array $values
+ */
+function _enhancedtags_update_tag_enhanced($values) {
+  $currentTag = CRM_Enhancedtags_BAO_TagEnhanced::getActiveByTagId($values['tag_id']);
+  if (!empty($currentTag)) {
+    $params['id'] = $currentTag['id'];
     if (isset($values['coordinator_start_date'])) {
-      $params['start_date'] = CRM_Utils_Date::processDate($values['coordinator_start_date']);
+      $params['start_date'] = _enhancedtags_process_date($values['coordinator_start_date']);
     }
     if (isset($values['coordinator_end_date'])) {
-      $params['end_date'] = CRM_Utils_Date::processDate($values['coordinator_end_date']);
+      $params['end_date'] = _enhancedtags_process_date($values['coordinator_end_date']);
+    }
+    $now = new DateTime();
+    if (!empty($params['end_date']) && $params['end_date'] < $now->format('Ymd')) {
+      $params['is_active'] = 0;
     }
     CRM_Enhancedtags_BAO_TagEnhanced::add($params);
   }
 }
 /**
+ * Function to format date
+ * 
+ * @param string $inDate
+ * @return string $date->format
+ * 
+ */
+function _enhancedtags_process_date($inDate) {
+  if (empty($inDate)) {
+    return '';
+  } else {
+    $outDate = new DateTime($inDate);
+    return $outDate->format('Ymd');
+  }
+}
+/**
+ * Function to process add action for enhanced tag
+ * 
+ * @param array $values
+ */
+function _enhanced_add_action($values) {
+  if (isset($values['coordinator_id']) && !empty($values['coordinator_id'])) {
+    $tagQuery = 'SELECT MAX(id) as maxTagId FROM civicrm_tag';
+    $tagDao = CRM_Core_DAO::executeQuery($tagQuery);
+    if ($tagDao->fetch()) {
+      $values['tag_id'] = $tagDao->maxTagId;
+      _enhanced_add_tag_enhanced($values);
+    }
+  }
+}
+/**
+ * Function to add enhanced tag
+ * 
+ * @param array $values
+ */
+function _enhancedtags_add_tag_enhanced($values) {
+  $params = array('is_active' => 1, 'tag_id' => $values['tag_id'], 'coordinator_id' => $values['coordinator_id']);
+  if (isset($values['coordinator_start_date'])) {
+    $startDate = new DateTime($values['coordinator_start_date']);
+    $params['start_date'] = $startDate->format('Ymd');
+  }
+  if (isset($values['coordinator_end_date'])) {
+    $endDate = new DateTime($values['coordinator_end_date']);
+    $params['end_date'] = $endDate->format('Ymd');
+  }
+  CRM_Enhancedtags_BAO_TagEnhanced::add($params);
+}
+/**
  * Function to add coordinator data to tag admin form
+ * 
+ * @param object $form
  */
 function _enhancedtags_add_coordinator_tag(&$form) {
   $enhancedTagsConfig = CRM_Enhancedtags_Config::singleton();
@@ -192,6 +291,8 @@ function _enhancedtags_add_coordinator_tag(&$form) {
 }
 /**
  * Function to set default coordinator data for update
+ * 
+ * @param object $form
  */
 function _enhancedtags_default_coordinator_tag(&$form) {
   $defaults = array();
@@ -202,7 +303,7 @@ function _enhancedtags_default_coordinator_tag(&$form) {
       break;
     case CRM_Core_Action::UPDATE:
       $tagId = $form->getVar('_id');
-      $enhancedTag = CRM_Enhancedtags_BAO_TagEnhanced::getByTagId($tagId);
+      $enhancedTag = CRM_Enhancedtags_BAO_TagEnhanced::getActiveByTagId($tagId);
       if (isset($enhancedTag['start_date'])) {
         list($defaults['coordinator_start_date']) = CRM_Utils_Date::setDateDefaults($enhancedTag['start_date']);
       }
@@ -221,14 +322,16 @@ function _enhancedtags_default_coordinator_tag(&$form) {
 /**
  * Implementation of hook civicrm_pageRun
  * add coordinator to tag admin page
+ * 
+ * @param object $page
  */
 function enhancedtags_civicrm_pageRun(&$page) {
   $pageName = $page->getVar('_name');
   if ($pageName == 'CRM_Admin_Page_Tag') { 
     /*
-     * retrieve all tag enhanced data and put in array with tag_id as index
+     * retrieve all active tag enhanced data and put in array with tag_id as index
      */
-    $enhancedTags = CRM_Enhancedtags_BAO_TagEnhanced::getValues(array());
+    $enhancedTags = CRM_Enhancedtags_BAO_TagEnhanced::getValues(array('is_active' => 1));
     $coordinators = array();
     foreach ($enhancedTags as $enhancedTag) {
       $coordinators[$enhancedTag['tag_id']] = CRM_Enhancedtags_BAO_TagEnhanced::getCoordinatorName($enhancedTag['coordinator_id']);
@@ -238,7 +341,7 @@ function enhancedtags_civicrm_pageRun(&$page) {
 }
 /**
  * Implementation of hook civicrm_merge
- * set end date for coordinator when merging tags
+ * When merging tags
  * 
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 10 Jun 2014
@@ -247,20 +350,26 @@ function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NU
   if ($tables[0] == 'civicrm_entity_tag' && $tables[1] = 'civicrm_tag') {
     $params['tag_id'] = $mainId;
     $params['end_date'] = CRM_Utils_Date::processDate(date('Ymd'));
+    
     CRM_Enhancedtags_BAO_TagEnhanced::updateByTagId($params);
   }
 }
 /**
  * Implementation of hook civicrm_post
- * set end date for coordinator when deleting tags
+ * when a tag is deleted, retrieve active enhanced and set end date to today
+ * and active is 0
  * 
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 10 Jun 2014
  */
 function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   if ($op === 'delete' && $objectName === 'Tag') {
-    $params['tag_id'] = $objectId;
-    $params['end_date'] = CRM_Utils_Date::processDate(date('Ymd'));
-    CRM_Enhancedtags_BAO_TagEnhanced::updateByTagId($params);
+    $activeTag = CRM_Enhancedtags_BAO_TagEnhanced::getActiveByTagId($objectId);
+    $params = array('id' => $activeTag['id'], 'is_active' => 0);
+    $endDate = new DateTime();
+    if (empty($activeTag['end_date']) || $activeTag['end_date'] > $endDate->format('Y-m-d')) {
+      $params['end_date'] = $endDate->format('Ymd');
+    }
+    CRM_Enhancedtags_BAO_TagEnhanced::add($params);
   }
 }

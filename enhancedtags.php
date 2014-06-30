@@ -250,13 +250,13 @@ function _enhancedtags_process_date($inDate) {
  * 
  * @param array $values
  */
-function _enhanced_add_action($values) {
+function _enhancedtags_add_action($values) {
   if (isset($values['coordinator_id']) && !empty($values['coordinator_id'])) {
     $tagQuery = 'SELECT MAX(id) as maxTagId FROM civicrm_tag';
     $tagDao = CRM_Core_DAO::executeQuery($tagQuery);
     if ($tagDao->fetch()) {
       $values['tag_id'] = $tagDao->maxTagId;
-      _enhanced_add_tag_enhanced($values);
+      _enhancedtags_add_tag_enhanced($values);
     }
   }
 }
@@ -266,7 +266,7 @@ function _enhanced_add_action($values) {
  * @param array $values
  */
 function _enhancedtags_add_tag_enhanced($values) {
-  $params = array('is_active' => 1, 'tag_id' => $values['tag_id'], 'coordinator_id' => $values['coordinator_id']);
+  $params = array('tag_id' => $values['tag_id'], 'coordinator_id' => $values['coordinator_id']);
   if (isset($values['coordinator_start_date'])) {
     if (empty($values['coordinator_start_date'])) {
       $params['start_date'] = '';
@@ -275,11 +275,16 @@ function _enhancedtags_add_tag_enhanced($values) {
       $params['start_date'] = $startDate->format('Ymd');
     }
   }
+  $params['is_active'] = 1;
   if (isset($values['coordinator_end_date'])) {
     if (empty($values['coordinator_end_date'])) {
       $params['end_date'] = '';
     } else {
       $endDate = new DateTime($values['coordinator_end_date']);
+      $nowDate = new DateTime();
+      if ($endDate < $nowDate) {
+        $params['is_active'] = 0;
+      }
       $params['end_date'] = $endDate->format('Ymd');
     }
   }
@@ -359,10 +364,7 @@ function enhancedtags_civicrm_pageRun(&$page) {
  */
 function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NULL, $tables = NULL ) {
   if ($tables[0] == 'civicrm_entity_tag' && $tables[1] = 'civicrm_tag') {
-    $params['tag_id'] = $mainId;
-    $params['end_date'] = CRM_Utils_Date::processDate(date('Ymd'));
-    
-    CRM_Enhancedtags_BAO_TagEnhanced::updateByTagId($params);
+    CRM_Enhancedtags_BAO_TagEnhanced::merge($mainId, $otherId);
   }
 }
 /**

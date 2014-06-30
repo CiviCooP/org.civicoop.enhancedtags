@@ -163,4 +163,92 @@ class CRM_Enhancedtags_BAO_TagEnhanced extends CRM_Enhancedtags_DAO_TagEnhanced 
     }
     return $coordinatorName;
   }
+  /**
+   * Function to merge tag enhanced
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 30 Jun 2014
+   * @param int $fromTagId
+   * @param int $toTagId
+   * @access public
+   * @static
+   */
+  public static function merge($fromTagId, $toTagId) {
+    $tagEnhanced = new CRM_Enhancedtags_BAO_TagEnhanced();
+    $tagEnhanced->tag_id = $fromTagId;
+    $tagEnhanced->is_active = 0;
+    $tagEnhanced->find();
+    while ($tagEnhanced->fetch()) {
+      $params['tag_id'] = $toTagId;
+      $params['coordinator_id'] = $tagEnhanced->coordinator_id;
+      $params['start_date'] = self::processDate($tagEnhanced->start_date);
+      $params['end_date'] = self::processDate($tagEnhanced->end_date);
+      $params['is_active'] = $tagEnhanced->is_active;
+      $params['id'] = $tagEnhanced->id;
+      self::add($params);
+    }
+    self::mergeActive($fromTagId, $toTagId);
+  }
+  /**
+   * Function to merge active coordinator:
+   * - if there is no active old active, stop processing
+   * - if there is no new active, merge
+   * - if there is a new active,  set old end_date today and is_active = 0
+   *
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 30 Jun 2014
+   * @param int $fromTagId
+   * @param int $toTagId
+   * @access private
+   * @static
+   */
+  private static function mergeActive($fromTagId, $toTagId) {
+    $oldTag = new CRM_Enhancedtags_BAO_TagEnhanced();
+    $newTag = new CRM_Enhancedtags_BAO_TagEnhanced();
+    $oldTag->tag_id = $fromTagId;
+    $oldTag->is_active = 1;
+    $oldTag->find();
+    if ($oldTag->fetch()) {
+      $newTag->tag_id = $toTagId;
+      $newTag->is_active = 1;
+      $newTag->find();
+      if ($newTag->fetch()) {
+        $params['id'] = $oldTag->id;
+        $params['tag_id'] = $fromTagId;
+        $params['coordinator_id'] = $oldTag->coordinator_id;
+        $params['start_date'] = self::processDate($oldTag->start_date);
+        $nowDate = new DateTime();
+        $params['end_date'] = $nowDate->format('Ymd');
+        $params['is_active'] = 0;
+        self::add($params);        
+      } else {
+        $params['id'] = $oldTag->id;
+        $params['tag_id'] = $toTagId;
+        $params['coordinator_id'] = $oldTag->coordinator_id;
+        $params['start_date'] = self::processDate($oldTag->start_date);
+        $params['end_date'] = self::processDate($oldTag->end_date);
+        $params['is_active'] = $oldTag->is_active;
+        self::add($params);
+      }
+    }
+  }
+  
+  /**
+   * Function to process date in correct format
+   * 
+   * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+   * @date 30 Jun 2014
+   * @param string $inDate
+   * @return string $outDate
+   * @access private
+   * @static
+   */
+  private static function processDate($inDate) {
+    if (empty($inDate)) {
+      return '';
+    } else {
+      $outDate = new DateTime($inDate);
+      return $outDate->format('Ymd');    
+    }
+  }
 }

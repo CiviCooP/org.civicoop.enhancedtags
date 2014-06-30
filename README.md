@@ -24,7 +24,7 @@ When merging tags, all enhanced tags of the 'old' tag are moved to the new tag, 
 <h3>Contact summary</h3>
 On the contact summary of the current or old tag coordinator a field is added showing that the contact has been or still is a tag coordinator with the start and end date.
 <h3>Api</H3>
-In the extension there also is an API called TagEnhanced Get that will help you to retrieve the coordinator for a tag.
+In the extension there also is an API called TagEnhanced Get that will help you to retrieve the coordinator (history) for a tag.
 
 
 

@@ -20,7 +20,7 @@ When the user in edit mode changes the coordinator, the record of the old tag/co
 <h3>Scheduled job for optimization</h3>
 This could lead to records where the end_date is actually earlier than the start date. These records are removed with the scheduled job TagEnhanced.Optimize. This scheduled job is set to run always when cron jobs are run.
 <h3>Merging</h3>
-When merging tags, all enhanced tags of the 'old' tag are moved to the new tag, unless the new tag/coordinator combination already exists.
+When merging tags, all enhanced tags of the 'old' tag are moved to the new tag, unless the new tag/coordinator combination already exists. If the latter is the case, the 'old' record is deleted.
 <h3>Contact summary</h3>
 On the contact summary of the current or old tag coordinator a field is added showing that the contact has been or still is a tag coordinator with the start and end date.
 <h3>Api</H3>

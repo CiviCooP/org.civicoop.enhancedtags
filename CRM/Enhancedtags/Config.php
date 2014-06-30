@@ -4,6 +4,9 @@
  *
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 2 Jun 2014
+
+ *  * Copyright (C) 2014 Coöperatieve CiviCooP U.A. <http://www.civicoop.org>
+ * Licensed under the AGPL-3.0
  */
 class CRM_Enhancedtags_Config {
   /*

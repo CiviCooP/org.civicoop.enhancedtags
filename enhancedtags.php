@@ -1,5 +1,8 @@
 <?php
-
+/*
+ * Copyright (C) 2014 Coöperatieve CiviCooP U.A. <http://www.civicoop.org>
+ * Licensed under the AGPL-3.0
+ */
 require_once 'enhancedtags.civix.php';
 
 /**
@@ -265,12 +268,20 @@ function _enhanced_add_action($values) {
 function _enhancedtags_add_tag_enhanced($values) {
   $params = array('is_active' => 1, 'tag_id' => $values['tag_id'], 'coordinator_id' => $values['coordinator_id']);
   if (isset($values['coordinator_start_date'])) {
-    $startDate = new DateTime($values['coordinator_start_date']);
-    $params['start_date'] = $startDate->format('Ymd');
+    if (empty($values['coordinator_start_date'])) {
+      $params['start_date'] = '';
+    } else {
+      $startDate = new DateTime($values['coordinator_start_date']);
+      $params['start_date'] = $startDate->format('Ymd');
+    }
   }
   if (isset($values['coordinator_end_date'])) {
-    $endDate = new DateTime($values['coordinator_end_date']);
-    $params['end_date'] = $endDate->format('Ymd');
+    if (empty($values['coordinator_end_date'])) {
+      $params['end_date'] = '';
+    } else {
+      $endDate = new DateTime($values['coordinator_end_date']);
+      $params['end_date'] = $endDate->format('Ymd');
+    }
   }
   CRM_Enhancedtags_BAO_TagEnhanced::add($params);
 }

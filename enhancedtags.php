@@ -218,10 +218,10 @@ function _enhancedtags_update_tag_enhanced($values) {
   if (!empty($currentTag)) {
     $params['id'] = $currentTag['id'];
     if (isset($values['coordinator_start_date'])) {
-      $params['start_date'] = _enhancedtags_process_date($values['coordinator_start_date']);
+      $params['start_date'] = _enhancedtags_process_date($values['coordinator_start_date'], 'Ymd');
     }
     if (isset($values['coordinator_end_date'])) {
-      $params['end_date'] = _enhancedtags_process_date($values['coordinator_end_date']);
+      $params['end_date'] = _enhancedtags_process_date($values['coordinator_end_date'], 'Ymd');
     }
     $now = new DateTime();
     if (!empty($params['end_date']) && $params['end_date'] < $now->format('Ymd')) {
@@ -237,12 +237,12 @@ function _enhancedtags_update_tag_enhanced($values) {
  * @return string $date->format
  * 
  */
-function _enhancedtags_process_date($inDate) {
+function _enhancedtags_process_date($inDate, $format) {
   if (empty($inDate)) {
     return '';
   } else {
     $outDate = new DateTime($inDate);
-    return $outDate->format('Ymd');
+    return $outDate->format($format);
   }
 }
 /**
@@ -358,9 +358,6 @@ function enhancedtags_civicrm_pageRun(&$page) {
 /**
  * Implementation of hook civicrm_merge
  * When merging tags
- * 
- * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
- * @date 10 Jun 2014
  */
 function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NULL, $tables = NULL ) {
   if ($tables[0] == 'civicrm_entity_tag' && $tables[1] = 'civicrm_tag') {
@@ -371,9 +368,6 @@ function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NU
  * Implementation of hook civicrm_post
  * when a tag is deleted, retrieve active enhanced and set end date to today
  * and active is 0
- * 
- * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
- * @date 10 Jun 2014
  */
 function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   if ($op === 'delete' && $objectName === 'Tag') {
@@ -384,5 +378,76 @@ function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
       $params['end_date'] = $endDate->format('Ymd');
     }
     CRM_Enhancedtags_BAO_TagEnhanced::add($params);
+  }
+}
+/**
+ * Implementation of hook civicrm_summary
+ * Add coordinator data on summary if present
+ */
+function enhancedtags_civicrm_summary($contactID, &$content, &$contentPlacement) { 
+  $displayData = array();
+  $coordinatorData = CRM_Enhancedtags_BAO_TagEnhanced::getValues(array('coordinator_id' => $contactID));
+  foreach ($coordinatorData as $coordinator) {
+    $displayData[] = _enhancedtags_create_coordinator_text($coordinator);
+  }
+  $coordinator = implode(', ', $displayData);
+  if (!empty($coordinator)) {
+    $content = _enhancedtags_summary_coordinator_content($coordinator);
+  }
+}
+/**
+ * Function to set coordinator field on summary
+ */
+function _enhancedtags_summary_coordinator_content($coordinator) {
+  $content = "<div id='coordinator'><div class='crm-summary-row'><div class='crm-label'>"
+    . "Coordinator of </div><div class='crm-content'>".$coordinator.
+    "</div></div></div>";
+  $content .= <<< EOT
+    <script>
+    cj(function($){
+      if ($(".crm-contact_type_label").length == 0) {
+        CRM.alert("Someone has changed the summary layout, coordinator can't be displayed properly");
+      return;
+    }
+    $(".crm-contact_type_label").parent().parent().prepend($("#coordinator").html());
+  });
+  </script>
+EOT;
+
+  return $content;
+}
+/**
+ * Function to create text line for coordinator
+ * 
+ * @param type $coordinator
+ * @return string $coordinatorTxt
+ */
+function _enhancedtags_create_coordinator_text($coordinator) {
+  if (empty($coordinator)) {
+    return '';
+  }
+  $txtParts = array();
+  $txtParts[] = _enhancedtags_get_tag_name($coordinator['tag_id']);
+  if (isset($coordinator['start_date']) && !empty($coordinator['start_date'])) {
+    $txtParts[] = 'from '._enhancedtags_process_date($coordinator['start_date'], 'd-m-Y');
+  }
+  if (isset($coordinator['end_date']) && !empty($coordinator['end_date'])) {
+    $txtParts[] = 'to '._enhancedtags_process_date($coordinator['end_date'], 'd-m-Y');
+  }
+  $coordinatorTxt = implode(' ', $txtParts);
+  return $coordinatorTxt;
+}
+/**
+ * Function to retrive name of a tag with API
+ * 
+ * @param type $tagId
+ * @return string $tagName
+ */
+function _enhancedtags_get_tag_name($tagId) {
+  try {
+    $tagName = civicrm_api3('Tag', 'Getvalue', array('id' => $tagId, 'return' => 'name'));
+    return $tagName;
+  } catch (CiviCRM_API3_Exception $ex) {
+    return '';
   }
 }

@@ -24,7 +24,8 @@ class CRM_Enhancedtags_Config {
     $this->setCoordinatorList();
   }
   private function setCoordinatorList() {
-    $apiContact = civicrm_api3('Contact', 'Get', array('contact_sub_type' => 'Expert'));
+    $params = array('contact_sub_type' => 'Expert', 'options' => array('limit' => 0));
+    $apiContact = civicrm_api3('Contact', 'Get', $params);
     foreach($apiContact['values'] as $contact) {
       $this->coordinatorList[$contact['id']] = $contact['sort_name'];
     }

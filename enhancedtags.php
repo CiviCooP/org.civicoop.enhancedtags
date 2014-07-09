@@ -366,8 +366,8 @@ function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NU
 }
 /**
  * Implementation of hook civicrm_post
- * when a tag is deleted, retrieve active enhanced and set end date to today
- * and active is 0
+ * - when a tag is deleted, retrieve active enhanced and set end date to today
+ *  and active is 0
  */
 function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   if ($op === 'delete' && $objectName === 'Tag') {

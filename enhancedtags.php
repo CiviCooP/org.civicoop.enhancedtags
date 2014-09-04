@@ -372,12 +372,14 @@ function enhancedtags_civicrm_merge($type, &$data, $mainId = NULL, $otherId = NU
 function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   if ($op === 'delete' && $objectName === 'Tag') {
     $activeTag = CRM_Enhancedtags_BAO_TagEnhanced::getActiveByTagId($objectId);
-    $params = array('id' => $activeTag['id'], 'is_active' => 0);
-    $endDate = new DateTime();
-    if (empty($activeTag['end_date']) || $activeTag['end_date'] > $endDate->format('Y-m-d')) {
-      $params['end_date'] = $endDate->format('Ymd');
+    if (isset($activeTag['id'])) {
+      $params = array('id' => $activeTag['id'], 'is_active' => 0);
+      $endDate = new DateTime();
+      if (empty($activeTag['end_date']) || $activeTag['end_date'] > $endDate->format('Y-m-d')) {
+        $params['end_date'] = $endDate->format('Ymd');
+      }
+      CRM_Enhancedtags_BAO_TagEnhanced::add($params);
     }
-    CRM_Enhancedtags_BAO_TagEnhanced::add($params);
   }
 }
 /**

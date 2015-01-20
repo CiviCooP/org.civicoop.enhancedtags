@@ -387,22 +387,26 @@ function enhancedtags_civicrm_post($op, $objectName, $objectId, &$objectRef) {
  * Add coordinator data on summary if present
  */
 function enhancedtags_civicrm_summary($contactID, &$content, &$contentPlacement) { 
-  $displayData = array();
-  $coordinatorData = CRM_Enhancedtags_BAO_TagEnhanced::getValues(array('coordinator_id' => $contactID));
-  foreach ($coordinatorData as $coordinator) {
-    $displayData[] = _enhancedtags_create_coordinator_text($coordinator);
+  $params = array(
+    'coordinator_id' => $contactID,
+    'is_active' => 1);
+  $coordinator_data = CRM_Enhancedtags_BAO_TagEnhanced::getValues($params);
+  foreach ($coordinator_data as $coordinator) {
+    $display_text = _enhancedtags_get_tag_name($coordinator['tag_id']);
+    if (isset($coordinator['start_date']) && !empty($coordinator['start_date'])) {
+      $display_text .= ' from '._enhancedtags_process_date($coordinator['start_date'], 'd-m-Y');
+    }
   }
-  $coordinator = implode(', ', $displayData);
-  if (!empty($coordinator)) {
-    $content = _enhancedtags_summary_coordinator_content($coordinator);
+  if (!empty($display_text)) {
+    $content = _enhancedtags_summary_coordinator_content($display_text);
   }
 }
 /**
  * Function to set coordinator field on summary
  */
-function _enhancedtags_summary_coordinator_content($coordinator) {
+function _enhancedtags_summary_coordinator_content($coordinator_text) {
   $content = "<div id='coordinator'><div class='crm-summary-row'><div class='crm-label'>"
-    . "Coordinator of </div><div class='crm-content'>".$coordinator.
+    . "Coordinator of </div><div class='crm-content'>".$coordinator_text.
     "</div></div></div>";
   $content .= <<< EOT
     <script>

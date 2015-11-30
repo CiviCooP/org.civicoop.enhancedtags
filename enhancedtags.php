@@ -416,6 +416,7 @@ function _enhancedtags_summary_coordinator_content($coordinator_text) {
       return;
     }
     $(".crm-contact_type_label").parent().parent().prepend($("#coordinator").html());
+    $("#coordinator").hide();
   });
   </script>
 EOT;
